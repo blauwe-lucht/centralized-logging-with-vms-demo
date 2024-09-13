@@ -35,4 +35,35 @@ cd build
 cmake ..
 make
 
-echo "Frontend executable is available at /vagrant/src/frontend/build/fibonacci_server"
+echo Installing frontend...
+mkdir -p /usr/local/bin/fibonacci
+cp /vagrant/src/frontend/build/fibonacci_server /usr/local/bin/fibonacci/
+cp /vagrant/src/frontend/index.html /usr/local/bin/fibonacci/
+
+# Define service parameters
+SERVICE_NAME=fibonacci-frontend
+EXECUTABLE_PATH=/usr/local/bin/fibonacci/fibonacci_server
+WORKING_DIRECTORY=/usr/local/bin/fibonacci/
+SERVICE_USER=vagrant
+
+echo Creating the systemd service file...
+cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
+[Unit]
+Description=Fibonacci Frontend Service
+After=network.target
+
+[Service]
+ExecStart=${EXECUTABLE_PATH}
+WorkingDirectory=${WORKING_DIRECTORY}
+User=${SERVICE_USER}
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+
+echo Starting the frontend service...
+sudo systemctl start ${SERVICE_NAME}
+sudo systemctl enable ${SERVICE_NAME}
