@@ -1,5 +1,4 @@
 Vagrant.configure("2") do |config|
-  # VM for Frontend and Users Service
   config.vm.define "frontend" do |frontend|
     frontend.vm.box = "generic/alma8"
     frontend.vm.network "private_network", ip: "192.168.6.31"
@@ -10,6 +9,18 @@ Vagrant.configure("2") do |config|
     end
     frontend.vm.provision "shell", path: "configure-frontend.sh"
     frontend.vm.synced_folder ".", "/vagrant"
+  end
+
+  config.vm.define "microservice" do |microservice|
+    microservice.vm.box = "generic/alma8"
+    microservice.vm.network "private_network", ip: "192.168.6.32"
+    microservice.vm.hostname = "microservice"
+    microservice.vm.provider "virtualbox" do |v|
+      v.memory = 1024
+      v.cpus = 2
+    end
+    # microservice.vm.provision "shell", path: "configure-microservice.sh"
+    microservice.vm.synced_folder ".", "/vagrant"
   end
 
   # VM for Catalogue and Carts Service
