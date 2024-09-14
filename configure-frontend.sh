@@ -7,7 +7,7 @@ yum update -y
 
 echo "Installing necessary packages..."
 yum groupinstall "Development Tools" -y
-yum install cmake git boost-devel libuuid-devel -y
+yum install cmake git boost-devel libuuid-devel nginx -y
 
 echo "Cloning Crow repository..."
 if [ ! -d "/usr/local/include/crow" ]; then
@@ -75,3 +75,72 @@ systemctl daemon-reload
 echo Starting the frontend service...
 sudo systemctl restart ${SERVICE_NAME}
 sudo systemctl enable ${SERVICE_NAME}
+
+echo Configuring nginx...
+cat > /etc/nginx/conf.d/fibonacci_frontend.conf <<EOF
+server {
+    listen 80;
+    server_name _;
+    
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_buffer_size 128k;
+        proxy_buffers 4 256k;
+        proxy_busy_buffers_size 256k;
+    }
+}
+EOF
+cat > /etc/nginx/nginx.conf <<EOF
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
+                      '\$status \$body_bytes_sent "\$http_referer" '
+                      '"\$http_user_agent" "\$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 2048;
+
+    include             /etc/nginx/mime.types;
+    default_type        application/octet-stream;
+
+    # Load modular configuration files from the /etc/nginx/conf.d directory.
+    # See http://nginx.org/en/docs/ngx_core_module.html#include
+    # for more information.
+    include /etc/nginx/conf.d/*.conf;
+}
+EOF
+
+echo Starting nginx...
+systemctl enable nginx
+systemctl restart nginx
+
+echo Opening up port 80...
+firewall-cmd --permanent --add-service=http
+firewall-cmd --reload
+
+echo Allowing nginx to make network connections...
+setsebool -P httpd_can_network_connect 1
