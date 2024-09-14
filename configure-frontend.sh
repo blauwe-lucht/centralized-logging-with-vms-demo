@@ -37,8 +37,14 @@ make
 
 echo Installing frontend...
 mkdir -p /usr/local/bin/fibonacci
-cp /vagrant/src/frontend/build/fibonacci_server /usr/local/bin/fibonacci/
-cp /vagrant/src/frontend/index.html /usr/local/bin/fibonacci/
+if [ ! -f "/usr/local/bin/fibonacci/fibonacci_server" ]; then
+    cp /vagrant/src/frontend/build/fibonacci_server /usr/local/bin/fibonacci/
+    cp /vagrant/src/frontend/index.html /usr/local/bin/fibonacci/
+fi
+
+echo Setting up logging...
+mkdir -p /var/log/fibonacci
+chown vagrant: /var/log/fibonacci
 
 # Define service parameters
 SERVICE_NAME=fibonacci-frontend
@@ -57,6 +63,8 @@ ExecStart=${EXECUTABLE_PATH}
 WorkingDirectory=${WORKING_DIRECTORY}
 User=${SERVICE_USER}
 Restart=on-failure
+StandardOutput=append:/var/log/fibonacci/service.log
+StandardError=append:/var/log/fibonacci/service.log
 
 [Install]
 WantedBy=multi-user.target
@@ -65,5 +73,5 @@ EOF
 systemctl daemon-reload
 
 echo Starting the frontend service...
-sudo systemctl start ${SERVICE_NAME}
+sudo systemctl restart ${SERVICE_NAME}
 sudo systemctl enable ${SERVICE_NAME}
