@@ -1,2 +1,4 @@
 /.vagrant
 build
+target
+.idea

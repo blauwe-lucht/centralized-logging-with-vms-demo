@@ -1,0 +1,13 @@
+[package]
+name = "fibonacci_frontend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.9.0"
+flexi_logger = "0.29.0"
+log = "0.4.22"
+reqwest = { version = "0.12.7", features = ["json"] }
+tokio = { version = "1.40.0", features = ["full"] }
+uuid = { version = "1.10.0", features = ["v4"] }
+serde = { version = "1.0.210", features = ["derive"] }

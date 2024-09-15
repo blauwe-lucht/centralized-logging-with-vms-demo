@@ -5,41 +5,23 @@ set -euo pipefail
 echo "Updating system..."
 yum update -y
 
-echo "Installing necessary packages..."
-yum groupinstall "Development Tools" -y
-yum install cmake git boost-devel libuuid-devel nginx libcurl-devel -y
-
-echo "Cloning Crow repository..."
-if [ ! -d "/usr/local/include/crow" ]; then
-    git clone https://github.com/CrowCpp/crow.git /usr/local/include/crow
-fi
-
-echo "Installing spdlog..."
-if [ ! -d "/usr/local/include/spdlog" ]; then
-    git clone https://github.com/gabime/spdlog.git /usr/local/include/spdlog
-fi
-
-echo "Installing asio..."
-if [ ! -d "/usr/local/include/asio" ]; then
-    git clone https://github.com/chriskohlhoff/asio /usr/local/include/asio
-fi
+echo "Installing Rust..."
+yum install -y pkg-config openssl-devel
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 echo "Opening up port 8080..."
 firewall-cmd --zone=public --add-port=8080/tcp --permanent
 firewall-cmd --reload
 
 echo "Building frontend..."
-cd /vagrant/src/frontend
-mkdir -p build
-cd build
-cmake ..
-make
+cd /vagrant/src/frontend-rust
+cargo build
 
 echo Installing frontend...
 mkdir -p /usr/local/bin/fibonacci
 if [ ! -f "/usr/local/bin/fibonacci/fibonacci_frontend" ]; then
-    cp /vagrant/src/frontend/build/fibonacci_frontend /usr/local/bin/fibonacci/
-    cp /vagrant/src/frontend/index.html /usr/local/bin/fibonacci/
+    cp /vagrant/src/frontend-rust/target/debug/fibonacci_frontend /usr/local/bin/fibonacci/
+    cp /vagrant/src/frontend-rust/index.html /usr/local/bin/fibonacci/
 fi
 
 echo Setting up logging...
