@@ -74,6 +74,8 @@ async fn index() -> impl Responder {
 
 // Handler to process Fibonacci requests
 async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, client: web::Data<Arc<Client>>) -> impl Responder {
+    debug!("fibonacci_handler start");
+    
     let request_id = generate_request_id();
     let number = req_body.number;
 
