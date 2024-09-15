@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(FibonacciFrontend)
+project(FibonacciBackend)
 
 # Set C++ version
 set(CMAKE_CXX_STANDARD 17)
@@ -12,7 +12,6 @@ include_directories(
 )
 
 # Add the executable
-add_executable(fibonacci_frontend main.cpp)
+add_executable(fibonacci_backend main.cpp)
 
-# Link any additional libraries if needed (e.g., pthread for multi-threading)
-target_link_libraries(fibonacci_frontend pthread uuid curl)
+target_link_libraries(fibonacci_backend pthread uuid)

@@ -7,7 +7,7 @@ yum update -y
 
 echo "Installing necessary packages..."
 yum groupinstall "Development Tools" -y
-yum install cmake git boost-devel libuuid-devel nginx libcurl-devel -y
+yum install cmake git boost-devel libuuid-devel nginx -y
 
 echo "Cloning Crow repository..."
 if [ ! -d "/usr/local/include/crow" ]; then
@@ -24,22 +24,21 @@ if [ ! -d "/usr/local/include/asio" ]; then
     git clone https://github.com/chriskohlhoff/asio /usr/local/include/asio
 fi
 
-echo "Opening up port 8080..."
-firewall-cmd --zone=public --add-port=8080/tcp --permanent
+echo "Opening up port 5000..."
+firewall-cmd --zone=public --add-port=5000/tcp --permanent
 firewall-cmd --reload
 
-echo "Building frontend..."
-cd /vagrant/src/frontend
+echo "Building backend..."
+cd /vagrant/src/backend
 mkdir -p build
 cd build
 cmake ..
 make
 
-echo Installing frontend...
+echo Installing backend...
 mkdir -p /usr/local/bin/fibonacci
-if [ ! -f "/usr/local/bin/fibonacci/fibonacci_frontend" ]; then
-    cp /vagrant/src/frontend/build/fibonacci_frontend /usr/local/bin/fibonacci/
-    cp /vagrant/src/frontend/index.html /usr/local/bin/fibonacci/
+if [ ! -f "/usr/local/bin/fibonacci/fibonacci_backend" ]; then
+    cp /vagrant/src/backend/build/fibonacci_backend /usr/local/bin/fibonacci/
 fi
 
 echo Setting up logging...
@@ -47,15 +46,15 @@ mkdir -p /var/log/fibonacci
 chown vagrant: /var/log/fibonacci
 
 # Define service parameters
-SERVICE_NAME=fibonacci-frontend
-EXECUTABLE_PATH=/usr/local/bin/fibonacci/fibonacci_frontend
+SERVICE_NAME=fibonacci-backend
+EXECUTABLE_PATH=/usr/local/bin/fibonacci/fibonacci_backend
 WORKING_DIRECTORY=/usr/local/bin/fibonacci/
 SERVICE_USER=vagrant
 
 echo Creating the systemd service file...
 cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
-Description=Fibonacci Frontend Service
+Description=Fibonacci backend Service
 After=network.target
 
 [Service]
@@ -72,18 +71,18 @@ EOF
 
 systemctl daemon-reload
 
-echo Starting the frontend service...
+echo Starting the backend service...
 sudo systemctl restart ${SERVICE_NAME}
 sudo systemctl enable ${SERVICE_NAME}
 
 echo Configuring nginx...
-cat > /etc/nginx/conf.d/fibonacci_frontend.conf <<EOF
+cat > /etc/nginx/conf.d/fibonacci_backend.conf <<EOF
 server {
     listen 80;
     server_name _;
     
     location / {
-        proxy_pass http://localhost:8080;
+        proxy_pass http://localhost:5000;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;

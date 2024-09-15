@@ -3,9 +3,10 @@
 #include "spdlog/sinks/basic_file_sink.h"
 #include <fstream>
 #include <uuid/uuid.h>
+#include <curl/curl.h>
 
 // Generate a unique request ID
-std::string generateRequestID() {
+std::string generaterequest_id() {
     uuid_t uuid;
     uuid_generate(uuid);
     char uuid_str[37];
@@ -24,8 +25,43 @@ std::string readFile(const std::string& filePath) {
     return "";
 }
 
+std::string send_fibonacci_request(const std::string& url, const std::string& request_id) {
+    CURL* curl;
+    CURLcode res;
+    std::string response_data;
+
+    curl = curl_easy_init();
+    if (curl) {
+        // Set URL and headers
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, ("X-Request-ID: " + request_id).c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        // Define a callback to capture the response body
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, [](char* data, size_t size, size_t nmemb, std::string* buffer) {
+            if (buffer) {
+                buffer->append(data, size * nmemb);
+                return size * nmemb;
+            }
+            return static_cast<size_t>(0);
+        });
+
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_data);
+
+        // Perform the request
+        res = curl_easy_perform(curl);
+
+        // Clean up
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+    }
+    return response_data;
+}
+
 int main() {
-    auto file_logger = spdlog::basic_logger_mt("file_logger", "/var/log/fibonacci/application.log");
+    auto file_logger = spdlog::basic_logger_mt("fibonacci_frontend", "/var/log/fibonacci/application.log");
     spdlog::set_default_logger(file_logger);
     spdlog::set_level(spdlog::level::debug);
     spdlog::flush_every(std::chrono::seconds(1));
@@ -48,7 +84,7 @@ int main() {
     // API route to handle Fibonacci requests
     CROW_ROUTE(app, "/fibonacci").methods("POST"_method)
     ([](const crow::request& req) {
-        auto requestID = generateRequestID();
+        auto request_id = generaterequest_id();
 
         auto json_data = crow::json::load(req.body);
         if (!json_data) {
@@ -56,16 +92,18 @@ int main() {
             return crow::response(400, "Invalid input");
         }
 
-        spdlog::info("/fibonacci [{}] Starting request", requestID);
+        spdlog::info("/fibonacci [{}] Starting request", request_id);
 
         int number = json_data["number"].i();
-        spdlog::info("/fibonacci [{}] Requesting Fibonacci calculation for number: {}", requestID, number);
+        spdlog::info("/fibonacci [{}] Requesting Fibonacci calculation for number: {}", request_id, number);
 
-        // Forward request to microservice (Replace with real service call)
-        crow::response microservice_response = crow::response(200, "{\"result\": \"42\"}");
+        auto url = "http://192.168.6.32:5000/fibonacci/" + std::to_string(number);
+        spdlog::debug("/fibonacci [{}] using url {}", request_id, url);
 
-        spdlog::debug("/fibonacci [{}] Received response from microservice: {}", requestID, microservice_response.body);
-        return crow::response(microservice_response.body);
+        std::string microservice_response = send_fibonacci_request(url, request_id);
+
+        spdlog::debug("/fibonacci [{}] Received response from microservice: {}", request_id, microservice_response);
+        return crow::response(microservice_response);
     });
 
     spdlog::info("Starting backend server...");

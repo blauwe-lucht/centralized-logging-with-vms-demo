@@ -11,48 +11,15 @@ Vagrant.configure("2") do |config|
     frontend.vm.synced_folder ".", "/vagrant"
   end
 
-  config.vm.define "microservice" do |microservice|
-    microservice.vm.box = "generic/alma8"
-    microservice.vm.network "private_network", ip: "192.168.6.32"
-    microservice.vm.hostname = "microservice"
-    microservice.vm.provider "virtualbox" do |v|
+  config.vm.define "backend" do |backend|
+    backend.vm.box = "generic/alma8"
+    backend.vm.network "private_network", ip: "192.168.6.32"
+    backend.vm.hostname = "backend"
+    backend.vm.provider "virtualbox" do |v|
       v.memory = 1024
       v.cpus = 2
     end
-    # microservice.vm.provision "shell", path: "configure-microservice.sh"
-    microservice.vm.synced_folder ".", "/vagrant"
+    backend.vm.provision "shell", path: "configure-backend.sh"
+    backend.vm.synced_folder ".", "/vagrant"
   end
-
-  # VM for Catalogue and Carts Service
-#   config.vm.define "sockshop-catalogue-carts" do |catalogue_vm|
-#     catalogue_vm.vm.box = "generic/almalinux8"
-#     catalogue_vm.vm.network "private_network", ip: "192.168.6.32"
-#     catalogue_vm.vm.hostname = "sockshop-catalogue-carts"
-#     catalogue_vm.vm.provider "virtualbox" do |v|
-#       v.memory = 1024
-#       v.cpus = 2
-#     end
-#   end
-
-#   # VM for Orders, Payment, and Shipping Service
-#   config.vm.define "sockshop-orders-payment-shipping" do |orders_vm|
-#     orders_vm.vm.box = "generic/almalinux8"
-#     orders_vm.vm.network "private_network", ip: "192.168.6.33"
-#     orders_vm.vm.hostname = "sockshop-orders-payment-shipping"
-#     orders_vm.vm.provider "virtualbox" do |v|
-#       v.memory = 1024
-#       v.cpus = 2
-#     end
-#   end
-
-#   # VM for Database and Queue-master Service
-#   config.vm.define "sockshop-db-queue" do |db_vm|
-#     db_vm.vm.box = "generic/almalinux8"
-#     db_vm.vm.network "private_network", ip: "192.168.6.34"
-#     db_vm.vm.hostname = "sockshop-db-queue"
-#     db_vm.vm.provider "virtualbox" do |v|
-#       v.memory = 1024
-#       v.cpus = 2
-#     end
-#   end
 end
