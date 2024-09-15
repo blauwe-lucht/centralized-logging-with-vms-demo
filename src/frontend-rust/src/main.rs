@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder};
+use actix_web::{web, App, HttpServer, HttpResponse, Responder, HttpRequest};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -94,6 +94,13 @@ async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, client: web::D
     }
 }
 
+// Default route to catch all 404s and log them with the requested path
+async fn handle_404(req: HttpRequest) -> impl Responder {
+    let path = req.path(); // Get the requested path
+    warn!(requested_path = path, "404 - Page not found");
+    HttpResponse::NotFound().body(format!("Page not found: {}", path))
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // Create a file appender for logging to /var/log/fibonacci/application.log
@@ -120,6 +127,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(client.clone()))
             .route("/", web::get().to(index))
             .route("/fibonacci", web::post().to(fibonacci_handler))
+            .default_service(web::route().to(handle_404))  // Catch-all route for undefined paths
     })
         .bind("127.0.0.1:8080")?
         .run()
