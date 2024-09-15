@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
 use uuid::Uuid;
-use log::{info, debug, warn};
+use tracing::{info, debug, warn, Level};
+use tracing_subscriber::EnvFilter;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use std::sync::Arc;
-use flexi_logger::{Logger, WriteMode, Age, Cleanup, Criterion, FileSpec, Naming};
 
 // Struct to handle JSON input
 #[derive(Debug, Deserialize)]
@@ -32,17 +33,17 @@ fn read_file(file_path: &str) -> Option<String> {
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => {
-            warn!("File not found: {}", file_path);
+            warn!(file_path = file_path, "File not found");
             return None;
         }
     };
 
     let mut contents = String::new();
     if file.read_to_string(&mut contents).is_ok() {
-        info!("Read file: {}", file_path);
+        info!(file_path = file_path, "Read file");
         Some(contents)
     } else {
-        warn!("Failed to read file: {}", file_path);
+        warn!(file_path = file_path, "Failed to read file");
         None
     }
 }
@@ -64,7 +65,7 @@ async fn send_fibonacci_request(client: &Client, url: &str, request_id: &str) ->
 async fn index() -> impl Responder {
     match read_file("index.html") {
         Some(html) => {
-            debug!("Serving index.html with length: {}", html.len());
+            debug!(html_length = html.len(), "Serving index.html");
             HttpResponse::Ok().body(html)
         },
         None => HttpResponse::NotFound().body("File not found"),
@@ -76,18 +77,18 @@ async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, client: web::D
     let request_id = generate_request_id();
     let number = req_body.number;
 
-    info!("[{}] Received request for Fibonacci number: {}", request_id, number);
+    info!(request_id = request_id.as_str(), number = number, "Received request for Fibonacci number");
 
     let url = format!("http://192.168.6.32:5000/fibonacci/{}", number);
-    debug!("[{}] Using URL: {}", request_id, url);
+    debug!(request_id = request_id.as_str(), url = url.as_str(), "Sending request to backend");
 
     match send_fibonacci_request(&client, &url, &request_id).await {
         Ok(fib_response) => {
-            debug!("[{}] Microservice response: {:?}", request_id, fib_response);
+            debug!(request_id = request_id.as_str(), ?fib_response, "Received response from backend");
             HttpResponse::Ok().json(fib_response)
         },
         Err(err) => {
-            warn!("[{}] Error contacting microservice: {}", request_id, err);
+            warn!(request_id = request_id.as_str(), error = %err, "Error contacting backend");
             HttpResponse::InternalServerError().body("Failed to contact Fibonacci microservice")
         }
     }
@@ -95,18 +96,19 @@ async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, client: web::D
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Initialize logging
-    Logger::try_with_str("debug").unwrap()
-        .log_to_file(FileSpec::default().directory("/var/log/fibonacci"))
-        .format(flexi_logger::detailed_format)  // Use detailed format with timestamps
-        .write_mode(WriteMode::Direct)
-        .rotate(
-            Criterion::Age(Age::Day),
-            Naming::Timestamps,
-            Cleanup::KeepLogFiles(7),
-        )
-        .duplicate_to_stdout(flexi_logger::Duplicate::Warn)
-        .start().unwrap();
+    // Create a file appender for logging to /var/log/fibonacci/application.log
+    let file_appender = RollingFileAppender::new(Rotation::DAILY,
+                                                 "/var/log/fibonacci",
+                                                 "application");
+
+    // Set up `tracing-subscriber` to log structured logs in JSON format
+    tracing_subscriber::fmt()
+        .json()  // Output logs as JSON
+        .with_writer(file_appender)
+        .with_env_filter(EnvFilter::from_default_env())
+        .with_max_level(Level::DEBUG)
+        .init();
+
     info!("Fibonacci Frontend started");
 
     // Create an HTTP client instance
@@ -119,9 +121,9 @@ async fn main() -> std::io::Result<()> {
             .route("/", web::get().to(index))
             .route("/fibonacci", web::post().to(fibonacci_handler))
     })
-    .bind("127.0.0.1:8080")?
-    .run()
-    .await?;
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await?;
 
     Ok(())
 }
