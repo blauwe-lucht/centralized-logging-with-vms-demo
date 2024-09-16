@@ -80,7 +80,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .route("/fibonacci", web::post().to(fibonacci_handler))  // POST /fibonacci
     })
-        .bind("127.0.0.1:5000")?  // Listen on port 5000
+        .bind("0.0.0.0:5000")?  // Listen on port 5000
         .run()
         .await
 }

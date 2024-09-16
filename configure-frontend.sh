@@ -6,9 +6,13 @@ echo "Updating system..."
 yum update -y
 
 echo "Installing Rust..."
-yum install -y pkg-config openssl-devel
+# TODO do we still need this? yum install -y pkg-config openssl-devel
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+# Some packages are about to be deprecated, prevent that by pinning the version of the compiler.
+rustup install 1.81.0
+rustup default 1.81.0
 
+# TODO: remove this once everything is working ok
 echo "Opening up port 8080..."
 firewall-cmd --zone=public --add-port=8080/tcp --permanent
 firewall-cmd --reload

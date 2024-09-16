@@ -1,13 +1,12 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, HttpRequest};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
 use uuid::Uuid;
-use tracing::{info, debug, warn, Level};
+use tracing::{info, debug, warn, Level, error};
 use tracing_subscriber::EnvFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use std::sync::Arc;
+use rouille::{router, Request, Response};
+use serde_json::json;
 
 // Struct to handle JSON input
 #[derive(Debug, Deserialize)]
@@ -30,6 +29,8 @@ fn generate_request_id() -> String {
 
 // Helper function to read a file's contents
 fn read_file(file_path: &str) -> Option<String> {
+    debug!(function = "read_file", file_path = file_path, "Enter");
+
     let mut file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => {
@@ -40,7 +41,7 @@ fn read_file(file_path: &str) -> Option<String> {
 
     let mut contents = String::new();
     if file.read_to_string(&mut contents).is_ok() {
-        info!(file_path = file_path, "Read file");
+        debug!(file_path = file_path, "Read file successful");
         Some(contents)
     } else {
         warn!(file_path = file_path, "Failed to read file");
@@ -48,69 +49,71 @@ fn read_file(file_path: &str) -> Option<String> {
     }
 }
 
-// Function to handle the Fibonacci request to the backend microservice
-async fn send_fibonacci_request(client: &Client, url: &str, request_id: &str) -> Result<FibonacciResponse, reqwest::Error> {
-    let response = client
-        .get(url)
+fn send_fibonacci_request(number: i32, request_id: &str) -> Result<FibonacciResponse, Box<dyn std::error::Error>> {
+    let url = "http://192.168.6.32:5000/fibonacci";
+    debug!(function = "send_fibonacci_request", request_id = request_id, backend_url = url,
+        number = number, "Sending request");
+
+    let payload = json!({
+        "number": number
+    });
+
+    let response = attohttpc::post(url)
         .header("X-Request-ID", request_id)
-        .send()
-        .await?
-        .json::<FibonacciResponse>()
-        .await?;
+        .json(&payload)?
+        .send()?;
 
-    Ok(response)
+    let response_text = response.text()?;
+    debug!(function = "send_fibonacci_request", request_id = request_id,
+        backend_response = response_text.as_str(), "Response received");
+
+    let fib_response: FibonacciResponse = serde_json::from_str(&response_text)?;
+    debug!(function = "send_fibonacci_request", request_id = request_id,
+        answer = fib_response.result, "Answer received");
+
+    Ok(fib_response)
 }
 
-// Handler to serve the HTML frontend
-async fn index() -> impl Responder {
-    match read_file("index.html") {
-        Some(html) => {
-            debug!(html_length = html.len(), "Serving index.html");
-            HttpResponse::Ok().body(html)
-        },
-        None => HttpResponse::NotFound().body("File not found"),
-    }
-}
-
-// Handler to process Fibonacci requests
-async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, client: web::Data<Arc<Client>>) -> impl Responder {
-    debug!("fibonacci_handler start");
-
+fn handle_fibonacci_request(request: &Request) -> Response {
     let request_id = generate_request_id();
-    let number = req_body.number;
 
-    info!(request_id = request_id.as_str(), number = number, "Received request for Fibonacci number");
-
-    let url = format!("http://192.168.6.32:5000/fibonacci/{}", number);
-    debug!(request_id = request_id.as_str(), url = url.as_str(), "Sending request to backend");
-
-    match send_fibonacci_request(&client, &url, &request_id).await {
-        Ok(fib_response) => {
-            debug!(request_id = request_id.as_str(), ?fib_response, "Received response from backend");
-            HttpResponse::Ok().json(fib_response)
-        },
-        Err(err) => {
-            warn!(request_id = request_id.as_str(), error = %err, "Error contacting backend");
-            HttpResponse::InternalServerError().body("Failed to contact Fibonacci microservice")
+    // Read the request body (JSON payload)
+    let mut body = String::new();
+    if let Some(mut data) = request.data() {
+        if let Err(_) = data.read_to_string(&mut body) {
+            return Response::text("Failed to read request body").with_status_code(400);
         }
+    } else {
+        return Response::text("No request body found").with_status_code(400);
+    }
+
+    // Parse the JSON body
+    let fib_request: FibonacciRequest = match serde_json::from_str(&body) {
+        Ok(fib_request) => fib_request,
+        Err(_) => return Response::text("Invalid JSON").with_status_code(400),
+    };
+
+    // Send the request to the backend
+    match send_fibonacci_request(fib_request.number, request_id.as_str()) {
+        Ok(fib_response) => {
+            debug!(function = "handle_fibonacci_request", request_id = request_id,
+                "Response received");
+            // Convert the response to JSON and return it
+            let response_json = serde_json::to_string(&fib_response).unwrap();
+            Response::text(response_json)
+                .with_additional_header("Content-Type", "application/json")
+        }
+        Err(error) => {
+            error!(function = "handle_fibonacci_request", request_id = request_id, error = error,
+                "Failed to send fibonacci request");
+            Response::text("Failed to contact backend").with_status_code(500)
+        },
     }
 }
-
-// Default route to catch all 404s and log them with the requested path
-async fn handle_404(req: HttpRequest) -> impl Responder {
-    let path = req.path(); // Get the requested path
-    warn!(requested_path = path, "404 - Page not found");
-    HttpResponse::NotFound().body(format!("Page not found: {}", path))
-}
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    // Create a file appender for logging to /var/log/fibonacci/application.log
+fn main() {
     let file_appender = RollingFileAppender::new(Rotation::DAILY,
                                                  "/var/log/fibonacci",
                                                  "application");
-
-    // Set up `tracing-subscriber` to log structured logs in JSON format
     tracing_subscriber::fmt()
         .json()  // Output logs as JSON
         .with_writer(file_appender)
@@ -120,20 +123,21 @@ async fn main() -> std::io::Result<()> {
 
     info!("Fibonacci Frontend started");
 
-    // Create an HTTP client instance
-    let client = Arc::new(Client::new());
-
-    // Start the Actix web server
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(client.clone()))
-            .route("/", web::get().to(index))
-            .route("/fibonacci", web::post().to(fibonacci_handler))
-            .default_service(web::route().to(handle_404))  // Catch-all route for undefined paths
-    })
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await?;
-
-    Ok(())
+    rouille::start_server("127.0.0.1:8080", move |request| {
+        router!(request,
+            (GET) ["/"] => {
+                if let Some(file_contents) = read_file("index.html") {
+                    Response::html(file_contents)
+                }
+                else {
+                    Response::empty_404()
+                }
+            },
+            (POST) ["/fibonacci"] => {
+                // Handle Fibonacci calculations
+                handle_fibonacci_request(request)
+            },
+            _ => Response::empty_404()  // Return 404 for any other route
+        )
+    });
 }
