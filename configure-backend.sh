@@ -5,40 +5,22 @@ set -euo pipefail
 echo "Updating system..."
 yum update -y
 
-echo "Installing necessary packages..."
-yum groupinstall "Development Tools" -y
-yum install cmake git boost-devel libuuid-devel nginx -y
-
-echo "Cloning Crow repository..."
-if [ ! -d "/usr/local/include/crow" ]; then
-    git clone https://github.com/CrowCpp/crow.git /usr/local/include/crow
-fi
-
-echo "Installing spdlog..."
-if [ ! -d "/usr/local/include/spdlog" ]; then
-    git clone https://github.com/gabime/spdlog.git /usr/local/include/spdlog
-fi
-
-echo "Installing asio..."
-if [ ! -d "/usr/local/include/asio" ]; then
-    git clone https://github.com/chriskohlhoff/asio /usr/local/include/asio
-fi
+echo "Installing Rust..."
+yum install -y pkg-config openssl-devel
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 echo "Opening up port 5000..."
 firewall-cmd --zone=public --add-port=5000/tcp --permanent
 firewall-cmd --reload
 
 echo "Building backend..."
-cd /vagrant/src/backend
-mkdir -p build
-cd build
-cmake ..
-make
+cd /vagrant/src/backend-rust
+/root/.cargo/bin/cargo build
 
 echo Installing backend...
 mkdir -p /usr/local/bin/fibonacci
 if [ ! -f "/usr/local/bin/fibonacci/fibonacci_backend" ]; then
-    cp /vagrant/src/backend/build/fibonacci_backend /usr/local/bin/fibonacci/
+    cp /vagrant/src/backend-rust/target/debug/fibonacci_backend /usr/local/bin/fibonacci/
 fi
 
 echo Setting up logging...

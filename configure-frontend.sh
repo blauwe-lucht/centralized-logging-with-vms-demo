@@ -15,7 +15,7 @@ firewall-cmd --reload
 
 echo "Building frontend..."
 cd /vagrant/src/frontend-rust
-cargo build
+/root/.cargo/bin/cargo build
 
 echo Installing frontend...
 mkdir -p /usr/local/bin/fibonacci
