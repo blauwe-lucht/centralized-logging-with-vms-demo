@@ -125,6 +125,3 @@ systemctl restart nginx
 echo Opening up port 80...
 firewall-cmd --permanent --add-service=http
 firewall-cmd --reload
-
-echo Allowing nginx to make network connections...
-setsebool -P httpd_can_network_connect 1

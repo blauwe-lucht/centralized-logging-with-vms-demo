@@ -50,7 +50,7 @@ fn read_file(file_path: &str) -> Option<String> {
 }
 
 fn send_fibonacci_request(number: i32, request_id: &str) -> Result<FibonacciResponse, Box<dyn std::error::Error>> {
-    let url = "http://192.168.6.32:5000/fibonacci";
+    let url = "http://192.168.6.32/fibonacci";
     debug!(function = "send_fibonacci_request", request_id = request_id, backend_url = url,
         number = number, "Sending request");
 
@@ -58,7 +58,7 @@ fn send_fibonacci_request(number: i32, request_id: &str) -> Result<FibonacciResp
         "number": number
     });
 
-    let response = attohttpc::post(url)
+    let response = attohttpc::get(url)
         .header("X-Request-ID", request_id)
         .json(&payload)?
         .send()?;
@@ -113,7 +113,7 @@ fn handle_fibonacci_request(request: &Request) -> Response {
 fn main() {
     let file_appender = RollingFileAppender::new(Rotation::DAILY,
                                                  "/var/log/fibonacci",
-                                                 "application");
+                                                 "frontend");
     tracing_subscriber::fmt()
         .json()  // Output logs as JSON
         .with_writer(file_appender)
@@ -134,7 +134,6 @@ fn main() {
                 }
             },
             (POST) ["/fibonacci"] => {
-                // Handle Fibonacci calculations
                 handle_fibonacci_request(request)
             },
             _ => Response::empty_404()  // Return 404 for any other route

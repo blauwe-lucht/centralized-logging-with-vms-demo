@@ -1,8 +1,9 @@
-use actix_web::{web, App, HttpServer, HttpResponse, Responder, HttpRequest};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn};
+use std::io::Read;
+use tracing::{info, debug, warn, Level};
 use tracing_subscriber::EnvFilter;
-use uuid::Uuid;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use rouille::{router, Request, Response};
 
 // Struct to handle the incoming JSON request
 #[derive(Debug, Deserialize)]
@@ -19,7 +20,7 @@ struct FibonacciResponse {
 }
 
 // Function to calculate the Fibonacci number
-fn fibonacci(n: i32) -> i64 {
+fn calculate_fibonacci(n: i32) -> i64 {
     match n {
         0 => 0,
         1 => 1,
@@ -36,51 +37,94 @@ fn fibonacci(n: i32) -> i64 {
     }
 }
 
-// Handler to process Fibonacci requests
-async fn fibonacci_handler(req_body: web::Json<FibonacciRequest>, req: HttpRequest) -> impl Responder {
-    let request_id = req
-        .headers()
-        .get("X-Request-ID")
-        .map(|v| v.to_str().unwrap_or_default().to_string())
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
-
-    let number = req_body.number;
-    debug!(request_id = request_id.as_str(), number = number, "Received Fibonacci request");
-
-    if number < 0 {
-        warn!(request_id = request_id.as_str(), "Invalid Fibonacci number: {}", number);
-        return HttpResponse::BadRequest().json(format!("Invalid number: {}", number));
+fn extract_request_id(request: &Request) -> String {
+    const REQUEST_ID_HEADER: &str = "X-Request-ID";
+    if let Some(header) = request.header(REQUEST_ID_HEADER) {
+        debug!(request_id = %header, "Request ID found in headers");
+        header.to_string()
+    } else {
+        let new_request_id = "unknown";
+        warn!(request_id = %new_request_id, "No Request ID found in headers, using 'unknown'");
+        new_request_id.to_string()
     }
-
-    let result = fibonacci(number);
-    info!(request_id = request_id.as_str(), number = number, result = result, "Fibonacci result calculated");
-
-    let response = FibonacciResponse {
-        number,
-        result,
-        request_id,
-    };
-
-    HttpResponse::Ok().json(response)
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    // Initialize logging
+fn handle_fibonacci_request(request: &Request) -> Response {
+    info!(function = "handle_fibonacci_request", "Start");
+
+    let request_id = extract_request_id(request);
+
+    let body: String = match extract_request_body_text(request) {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
+
+    let fib_request: FibonacciRequest = match parse_body_text(&body) {
+        Ok(value) => value,
+        Err(value) => return value,
+    };
+
+    debug!(request_id = request_id, number = fib_request.number, "Calculating Fibonacci");
+
+    let result = calculate_fibonacci(fib_request.number);
+    let fib_response = FibonacciResponse {
+        number: fib_request.number,
+        result,
+        request_id: request_id.clone(),
+    };
+
+    info!(request_id = %request_id, result = result, "Fibonacci result calculated");
+
+    Response::json(&fib_response)
+}
+
+fn parse_body_text(body: &String) -> Result<FibonacciRequest, Response> {
+    let fib_request: FibonacciRequest = match serde_json::from_str(&body) {
+        Ok(req) => req,
+        Err(err) => {
+            warn!(function = "handle_fibonacci_request", body = body, error = %err, "Invalid JSON in request");
+            return Err(Response::text("Invalid JSON").with_status_code(400));
+        }
+    };
+    Ok(fib_request)
+}
+
+fn extract_request_body_text(request: &Request) -> Result<String, Response> {
+    let mut body = String::new();
+    if let Some(mut data) = request.data() {
+        if let Err(err) = data.read_to_string(&mut body) {
+            warn!(function = "handle_fibonacci_request", error = %err, "Failed to read request body");
+            return Err(Response::text("Failed to read request body").with_status_code(400));
+        }
+    } else {
+        warn!(function = "handle_fibonacci_request", "No request body found");
+        return Err(Response::text("No request body found").with_status_code(400));
+    }
+    Ok(body)
+}
+
+fn main(){
+    let file_appender = RollingFileAppender::new(Rotation::DAILY,
+                                                 "/var/log/fibonacci",
+                                                 "backend");
     tracing_subscriber::fmt()
-        .json()  // Use JSON format for structured logging
-        .with_max_level(tracing::Level::INFO)
+        .json()  // Output logs as JSON
+        .with_writer(file_appender)
         .with_env_filter(EnvFilter::from_default_env())
+        .with_max_level(Level::DEBUG)
         .init();
 
     info!("Fibonacci Backend started");
 
-    // Start the Actix web server
-    HttpServer::new(|| {
-        App::new()
-            .route("/fibonacci", web::post().to(fibonacci_handler))  // POST /fibonacci
-    })
-        .bind("0.0.0.0:5000")?  // Listen on port 5000
-        .run()
-        .await
+    rouille::start_server("127.0.0.1:5000", move |request| {
+        router!(request,
+            (GET) ["/"] => {
+                Response::text("Fibonacci API")
+            },
+            (GET) ["/fibonacci"] => {
+                handle_fibonacci_request(request)
+            },
+            _ => Response::empty_404()
+        )
+    });
 }
