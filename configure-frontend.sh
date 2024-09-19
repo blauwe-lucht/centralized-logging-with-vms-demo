@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euo pipefail
+set -euxo pipefail
 
 echo "Updating system..."
 yum update -y
@@ -133,3 +133,21 @@ firewall-cmd --reload
 
 echo Allowing nginx to make network connections...
 setsebool -P httpd_can_network_connect 1
+
+echo Installing fluentbit...
+curl https://raw.githubusercontent.com/fluent/fluent-bit/master/install.sh | sh
+
+echo Configuring fluentbit...
+mkdir -p /var/lib/fluent-bit
+if [ -f /tmp/fluent-bit.conf ]; then
+    rm -f /tmp/fluent-bit.conf
+fi
+cp /vagrant/fluent-bit/frontend/fluent-bit.conf /tmp
+cp /vagrant/fluent-bit/parsers.conf /tmp
+chown root: /tmp/fluent-bit.conf /tmp/parsers.conf
+mv /tmp/fluent-bit.conf /etc/fluent-bit/fluent-bit.conf
+mv /tmp/parsers.conf /etc/fluent-bit/parsers.conf
+
+echo Starting fluentbit...
+systemctl enable fluent-bit
+systemctl restart fluent-bit
