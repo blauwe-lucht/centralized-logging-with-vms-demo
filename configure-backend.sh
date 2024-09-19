@@ -5,12 +5,15 @@ set -euo pipefail
 echo "Updating system..."
 yum update -y
 
+echo "Installing nginx..."
+yum install -y nginx
+
 echo "Installing Rust..."
 yum install -y pkg-config openssl-devel
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 # Some packages are about to be deprecated, prevent that by pinning the version of the compiler.
-rustup install 1.81.0
-rustup default 1.81.0
+/root/.cargo/bin/rustup install 1.81.0
+/root/.cargo/bin/rustup default 1.81.0
 
 echo "Opening up port 5000..."
 firewall-cmd --zone=public --add-port=5000/tcp --permanent
