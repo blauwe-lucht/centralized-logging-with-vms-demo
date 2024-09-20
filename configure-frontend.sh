@@ -90,7 +90,7 @@ EOF
 cat > /etc/nginx/nginx.conf <<EOF
 user nginx;
 worker_processes auto;
-error_log /var/log/nginx/error.log;
+error_log /var/log/nginx/error.log warn;
 pid /run/nginx.pid;
 
 # Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
@@ -101,11 +101,21 @@ events {
 }
 
 http {
-    log_format  main  '\$remote_addr - \$remote_user [\$time_local] "\$request" '
-                      '\$status \$body_bytes_sent "\$http_referer" '
-                      '"\$http_user_agent" "\$http_x_forwarded_for"';
+    # Write as json so Fluent Bit can parse the logs easier:
+    log_format json escape=json '{'
+        '"time_local": "\$time_local", '
+        '"remote_addr": "\$remote_addr", '
+        '"remote_user": "\$remote_user", '
+        '"request": "\$request", '
+        '"status": \$status, '
+        '"body_bytes_sent": \$body_bytes_sent, '
+        '"request_time": \$request_time, '
+        '"http_referer": "\$http_referer", '
+        '"http_user_agent": "\$http_user_agent", '
+        '"http_x_forwarded_for": "\$http_x_forwarded_for"'
+        '}';
 
-    access_log  /var/log/nginx/access.log  main;
+    access_log  /var/log/nginx/access.log  json;
 
     sendfile            on;
     tcp_nopush          on;
