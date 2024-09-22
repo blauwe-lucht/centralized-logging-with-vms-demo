@@ -112,6 +112,7 @@ fn main(){
                                                  "backend");
     tracing_subscriber::fmt()
         .json()  // Output logs as JSON
+        .flatten_event(true)// Put fields at the root level
         .with_writer(file_appender)
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(Level::DEBUG)
