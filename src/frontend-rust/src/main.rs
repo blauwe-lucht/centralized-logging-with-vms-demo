@@ -121,8 +121,6 @@ fn main() {
     tracing_subscriber::fmt()
         .json()
         .flatten_event(true)// Put fields at the root level
-        .with_current_span(false)
-        .with_span_list(false)
         .with_writer(file_appender)
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(Level::DEBUG)
