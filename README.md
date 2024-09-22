@@ -1,3 +1,4 @@
+# Centralized logging with VMs demo
 
 ## OpenSearch API
 
