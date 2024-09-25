@@ -1,16 +1,11 @@
 # Based on the recommended docker-compose.yml at
 # https://opensearch.org/docs/latest/install-and-configure/install-opensearch/docker/
 # A 2-node OpenSearch cluster with account admin/T!mberW0lf#92,
-# an OpenSearch Dashboards node,
-# a filebeat node
-# and a loggenerator node that generates logs using Serilog.
-# Not using latest tags for the OpenSearch images because at the moment
-# 2.16.0 does not load the Discover page on Firefox (no idea why), so we're using 2.15.0
-# which does work properly.
+# an OpenSearch Dashboards node.
 
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:2.15.0
+    image: opensearchproject/opensearch:2.17.0
     container_name: opensearch-node1
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
@@ -42,7 +37,8 @@ services:
       start_period: 60s
 
   opensearch-node2:
-    image: opensearchproject/opensearch:2.15.0 # This should be the same image used for opensearch-node1 to avoid issues
+    # This should be the same image used for opensearch-node1 to avoid issues
+    image: opensearchproject/opensearch:2.17.0
     container_name: opensearch-node2
     environment:
       - cluster.name=opensearch-cluster
@@ -72,14 +68,18 @@ services:
       start_period: 60s
 
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:2.15.0 # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+    # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
+    image: opensearchproject/opensearch-dashboards:2.17.0
     container_name: opensearch-dashboards
     ports:
       - 5601:5601 # Map host port 5601 to container port 5601
     expose:
       - "5601" # Expose port 5601 for web access to OpenSearch Dashboards
     environment:
-      OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]' # Define the OpenSearch nodes that OpenSearch Dashboards will query
+      # Define the OpenSearch nodes that OpenSearch Dashboards will query:
+      OPENSEARCH_HOSTS: '["https://opensearch-node1:9200","https://opensearch-node2:9200"]'
+      # Prevent SSL issues and warnings:
+      SERVER_SSL_ENABLED: "false"
     networks:
       - logging-net
     depends_on:
