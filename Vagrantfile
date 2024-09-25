@@ -24,7 +24,7 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.define "opensearch" do |opensearch|
-    opensearch.vm.box = "gusztavvargadr/docker-linux"
+    opensearch.vm.box = "ubuntu/jammy64"
     opensearch.vm.network "private_network", ip: "192.168.6.33"
     opensearch.vm.hostname = "opensearch"
     opensearch.vm.synced_folder ".", "/vagrant"
@@ -33,19 +33,6 @@ Vagrant.configure("2") do |config|
       v.cpus = 2
     end
 
-    opensearch.vm.provision "shell", inline: <<-SHELL
-      echo Installing docker-compose...
-      apt-get install -y docker-compose
-
-      echo Fixing DNS issue...
-      cat << EOF > /etc/systemd/resolved.conf
-[Resolve]
-DNS=8.8.8.8
-EOF
-      systemctl restart systemd-resolved
-
-      docker compose -f /vagrant/opensearch/docker-compose.yml up -d --quiet-pull
-      echo Done!
-SHELL
+    opensearch.vm.provision "shell", path: "configure-opensearch.sh"
   end
 end
