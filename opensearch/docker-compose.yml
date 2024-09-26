@@ -7,6 +7,7 @@ services:
   opensearch-node1:
     image: opensearchproject/opensearch:2.17.0
     container_name: opensearch-node1
+    restart: unless-stopped
     environment:
       - cluster.name=opensearch-cluster # Name the cluster
       - node.name=opensearch-node1 # Name the node that will run in this container
@@ -40,6 +41,7 @@ services:
     # This should be the same image used for opensearch-node1 to avoid issues
     image: opensearchproject/opensearch:2.17.0
     container_name: opensearch-node2
+    restart: unless-stopped
     environment:
       - cluster.name=opensearch-cluster
       - node.name=opensearch-node2
@@ -71,6 +73,7 @@ services:
     # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
     image: opensearchproject/opensearch-dashboards:2.17.0
     container_name: opensearch-dashboards
+    restart: unless-stopped
     ports:
       - 5601:5601 # Map host port 5601 to container port 5601
     expose:
