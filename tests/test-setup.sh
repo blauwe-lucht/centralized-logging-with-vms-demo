@@ -5,6 +5,8 @@ set -uo pipefail
 frontend_ip=192.168.6.31
 backend_ip=192.168.6.32
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 assert() {
     local condition="$1"
     local description="$2"
@@ -21,7 +23,7 @@ execute_remote() {
     local cmd="$3"
 
     ssh vagrant@$vm_ip \
-        -i .vagrant/machines/$vm_name/virtualbox/private_key \
+        -i $script_dir/../.vagrant/machines/$vm_name/virtualbox/private_key \
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -o LogLevel=ERROR \
@@ -50,8 +52,30 @@ echo Checking frontend Nginx access logs...
 execute_remote frontend $frontend_ip "grep -q '^[{]' /var/log/nginx/access.log"
 assert "[[ $? -eq 0 ]]" "Nginx access log on frontend should be json format"
 
+execute_remote frontend $frontend_ip "grep -q '\"request_id\":' /var/log/nginx/access.log"
+assert "[[ $? -eq 0 ]]" "Nginx access log on frontend should contain request_id"
+
+echo Checking frontend application logs...
+filepath="/var/log/fibonacci/frontend.$(date +%Y-%m-%d)"
+execute_remote frontend $frontend_ip "grep -q '^[{]' $filepath"
+assert "[[ $? -eq 0 ]]" "Frontend application log should be json format"
+
+execute_remote frontend $frontend_ip "grep -q '\"request_id\":' $filepath"
+assert "[[ $? -eq 0 ]]" "Frontend application log should contain request_id"
+
 echo Checking backend Nginx access logs...
 execute_remote backend $backend_ip "grep -q '^[{]' /var/log/nginx/access.log"
 assert "[[ $? -eq 0 ]]" "Nginx access log on backend should be json format"
+
+execute_remote backend $backend_ip "grep -q '\"request_id\":' /var/log/nginx/access.log"
+assert "[[ $? -eq 0 ]]" "Nginx access log on backend should contain request_id"
+
+echo Checking backend application logs...
+filepath="/var/log/fibonacci/backend.$(date +%Y-%m-%d)"
+execute_remote backend $backend_ip "grep -q '^[{]' $filepath"
+assert "[[ $? -eq 0 ]]" "backend application log should be json format"
+
+execute_remote backend $backend_ip "grep -q '\"request_id\":' $filepath"
+assert "[[ $? -eq 0 ]]" "backend application log should contain request_id"
 
 echo Done!
