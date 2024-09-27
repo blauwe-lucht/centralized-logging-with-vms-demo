@@ -73,22 +73,4 @@ In this demo these solutions were not implemented to keep the demo simple.
 ## TODO
 
 - create scenarios
-- automatic flushing of log file buffers
 - field log has conflict in types
-
-```json
-PUT _index_template/fibonacci_template
-{
-  "index_patterns": ["fibonacci-*"],
-  "template": {
-    "mappings": {
-      "properties": {
-        "@timestamp": {
-          "type": "date_nanos",
-          "format": "strict_date_optional_time_nanos"
-        }
-      }
-    }
-  }
-}
-```
