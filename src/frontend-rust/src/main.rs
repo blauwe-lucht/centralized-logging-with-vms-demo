@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
-use uuid::Uuid;
 use tracing::{info, debug, warn, Level, error};
 use tracing_subscriber::EnvFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -20,11 +19,6 @@ struct FibonacciResponse {
     number: i32,
     result: i64,
     request_id: String,
-}
-
-// Helper function to generate a UUID
-fn generate_request_id() -> String {
-    Uuid::new_v4().to_string()
 }
 
 // Helper function to read a file's contents
@@ -73,9 +67,21 @@ fn send_fibonacci_request(number: i32, request_id: &str) -> Result<FibonacciResp
     Ok(fib_response)
 }
 
+fn extract_request_id(request: &Request) -> String {
+    const REQUEST_ID_HEADER: &str = "X-Request-ID";
+    if let Some(request_id) = request.header(REQUEST_ID_HEADER) {
+        debug!(request_id = %request_id, "Request ID found in headers");
+        request_id.to_string()
+    } else {
+        let request_id = "unknown";
+        warn!(request_id = %request_id, "No Request ID found in headers, using 'unknown'");
+        request_id.to_string()
+    }
+}
+
 fn handle_fibonacci_request(request: &Request) -> Response {
     let function = "handle_fibonacci_request";
-    let request_id = generate_request_id();
+    let request_id = extract_request_id(request);
     debug!(function, request_id, "Enter");
 
     // Read the request body (JSON payload)

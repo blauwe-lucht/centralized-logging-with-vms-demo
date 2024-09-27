@@ -65,6 +65,11 @@ sudo systemctl enable ${SERVICE_NAME}
 
 echo Configuring nginx...
 cat > /etc/nginx/conf.d/fibonacci_backend.conf <<EOF
+map \$http_x_request_id \$request_chain_id {
+  default   "\${request_id}";
+  ~*        "\${http_x_request_id}";
+}
+
 server {
     listen 80;
     server_name _;
