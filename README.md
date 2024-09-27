@@ -16,11 +16,11 @@ Create index pattern fibonacci*
 
 Refresh field list: Dashboard Management->Index patterns->select index pattern->Refresh field list
 
-## Use cases
+## Scenarios
 
 ### Following a request over multiple logs using request ID
 
-### Saving searches
+### Saving searches (why? what's the use case?)
 
 ### Filtering logs by level
 
@@ -60,9 +60,35 @@ can be used to minimize the clock skew between computer clocks,
 
 In this demo these solutions were not implemented to keep the demo simple.
 
+## Interesting stuff I had to figure out
+
+- How to use microsecond precision timestamps in OpenSearch.
+- How to write Nginx access logs as json.
+- How to write structured logging in Rust.
+- How to let Nginx generate a request ID.
+- How to pass that request ID through the whole chain.
+- How to have Fluentbit properly parse Nginx error log.
+- How to have Fluentbit use the journal as input to read the logs of a single service.
+
 ## TODO
 
-- add X-request-id to nginx backend log
-- create use cases
+- create scenarios
 - automatic flushing of log file buffers
 - field log has conflict in types
+
+```json
+PUT _index_template/fibonacci_template
+{
+  "index_patterns": ["fibonacci-*"],
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date_nanos",
+          "format": "strict_date_optional_time_nanos"
+        }
+      }
+    }
+  }
+}
+```
