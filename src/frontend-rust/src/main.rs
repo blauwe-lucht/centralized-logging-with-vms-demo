@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Read;
-use tracing::{info, debug, warn, Level, error};
+use tracing::{info, debug, warn, Level, error, trace};
 use tracing_subscriber::EnvFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use rouille::{router, Request, Response};
@@ -110,6 +110,7 @@ fn handle_fibonacci_request(request: &Request) -> Response {
         Ok(fib_response) => {
             // Convert the response to JSON and return it
             let response_json = serde_json::to_string(&fib_response).unwrap();
+            debug!(function, request_id, response_json, "Sending response");
             Response::text(response_json)
                 .with_additional_header("Content-Type", "application/json")
         }
