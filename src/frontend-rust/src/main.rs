@@ -24,7 +24,7 @@ struct FibonacciResponse {
 // Helper function to read a file's contents
 fn read_file(file_path: &str) -> Option<String> {
     let function = "read_file";
-    debug!(function, file_path, "Enter");
+    trace!(function, file_path, "Enter");
 
     let mut file = match File::open(file_path) {
         Ok(file) => file,
@@ -82,7 +82,7 @@ fn extract_request_id(request: &Request) -> String {
 fn handle_fibonacci_request(request: &Request) -> Response {
     let function = "handle_fibonacci_request";
     let request_id = extract_request_id(request);
-    debug!(function, request_id, "Enter");
+    trace!(function, request_id, "Enter");
 
     // Read the request body (JSON payload)
     let mut body = String::new();
