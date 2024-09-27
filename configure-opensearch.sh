@@ -24,4 +24,28 @@ sysctl -p
 
 echo Starting OpenSearch...
 docker compose -f /vagrant/opensearch/docker-compose.yml up -d --quiet-pull
+
+echo Configuring OpenSearch...
+# This will create an index template that will change the default precision
+# of @timestamp from milliseconds to nanoseconds. We need this to have all
+# our events displayed in the correct order.
+curl -s -X PUT "https://localhost:9200/_index_template/fibonacci_template" \
+     -H "Content-Type: application/json" \
+     -u 'admin:T!mberW0lf#92' \
+     --insecure \
+     -d '{
+  "index_patterns": ["fibonacci-*"],
+  "template": {
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date_nanos",
+          "format": "strict_date_optional_time_nanos"
+        }
+      }
+    }
+  }
+}'
+
+echo
 echo Done!
