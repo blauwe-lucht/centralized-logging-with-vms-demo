@@ -108,7 +108,6 @@ fn handle_fibonacci_request(request: &Request) -> Response {
     // Send the request to the backend
     match send_fibonacci_request(fib_request.number, request_id.as_str()) {
         Ok(fib_response) => {
-            debug!(function, request_id, "Response received");
             // Convert the response to JSON and return it
             let response_json = serde_json::to_string(&fib_response).unwrap();
             Response::text(response_json)
@@ -120,6 +119,7 @@ fn handle_fibonacci_request(request: &Request) -> Response {
         },
     }
 }
+
 fn main() {
     let file_appender = RollingFileAppender::new(Rotation::DAILY,
                                                  "/var/log/fibonacci",
