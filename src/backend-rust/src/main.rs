@@ -116,6 +116,8 @@ fn main(){
         .with_writer(file_appender)
         .with_env_filter(EnvFilter::from_default_env())
         .with_max_level(Level::DEBUG)
+        .with_file(true)
+        .with_line_number(true)
         .init();
 
     info!("Fibonacci Backend started");
