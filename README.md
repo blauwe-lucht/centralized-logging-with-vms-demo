@@ -39,12 +39,12 @@ Fout introduceren bij specifiek request? Bv panic bij 27372.
 
 ### Creating alert on number of errors
 
+### Creating alert on application services not started
+
 ## Issues
 
 Centralized logging is not a silver bullet, there are still some issues that make analyzing logs a challenge:
 
-- Precision: tools like OpenSearch only store timestamps with one millisecond resolution. Within the same millisecond, the
-order of events is not guaranteed.
 - Clock skew: computer clocks of separate machines are not synchronized to within one millisecond. This means that causality is not preserved.
 An example: event A happens on machine A which causes event B to happen on machine B. When B's clock is ahead of A's clock, the
 log of event B may have an earlier timestamp than event A. So when looking at the combined logs it will look like event B
@@ -52,8 +52,6 @@ occurred before event A.
 
 There are solutions for these issues:
 
-- An extra field containing microseconds can be added to each event and the combination of timestamp and microseconds
-can be used to sort the events properly.
 - A protocol like [PTP](https://en.wikipedia.org/wiki/Precision_Time_Protocol) (Precision Time Protocol)
 can be used to minimize the clock skew between computer clocks,
 - or increasing sequence numbers can be added to events to make the order of events explicit.

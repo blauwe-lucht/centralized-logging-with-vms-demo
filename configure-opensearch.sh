@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+opensearch_auth='admin:T!mberW0lf#92'
+opensearch_url="https://localhost:9200"
+osd_api=http://localhost:5601/api
+
 echo Installing docker...
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
@@ -29,11 +33,11 @@ echo Configuring OpenSearch...
 # This will create an index template that will change the default precision
 # of @timestamp from milliseconds to nanoseconds. We need this to have all
 # our events displayed in the correct order.
-curl -s -X PUT "https://localhost:9200/_index_template/fibonacci_template" \
-     -H "Content-Type: application/json" \
-     -u 'admin:T!mberW0lf#92' \
-     --insecure \
-     -d '{
+curl -s -X PUT "$opensearch_url/_index_template/fibonacci_template" \
+    -H "Content-Type: application/json" \
+    -u "$opensearch_auth" \
+    --insecure \
+    -d '{
   "index_patterns": ["fibonacci-*"],
   "template": {
     "mappings": {
@@ -46,6 +50,26 @@ curl -s -X PUT "https://localhost:9200/_index_template/fibonacci_template" \
     }
   }
 }'
+echo
+
+echo Configuring OpenSearch Dashboards...
+# Create an index pattern that we can use in the Discover page:
+response=$(curl -s -X GET "$osd_api/saved_objects/index-pattern/fibonacci" \
+  -u "$opensearch_auth" \
+  -H "osd-xsrf: true" || true)
+if echo "$response" | grep -q '"statusCode":404'; then
+    curl -s -X POST "$osd_api/saved_objects/index-pattern/fibonacci" \
+        -u "$opensearch_auth" \
+        -H "Content-Type: application/json" \
+        -H "osd-xsrf: true" \
+        -d '{
+    "attributes": {
+        "title": "fibonacci*",
+        "timeFieldName": "@timestamp"
+    }
+}'
+    echo
+fi
 
 echo
 echo Done!
