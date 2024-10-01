@@ -53,7 +53,7 @@ vagrant box remove <box name>
 
 ### Using the Fibonacci calculator
 
-Point a browser to http://192.168.6.31, fill in some number and press 'Calculate'.
+Point a browser to <http://192.168.6.31>, fill in some number and press 'Calculate'.
 
 ![Fibonacci Calculator](images/calculator.png)
 
@@ -80,7 +80,7 @@ curl -k -X GET "https://192.168.6.33:9200/fibonacci-*/_search" \
 ### Using OpenSearch Dashboards
 
 You'll get a much better experience when using OpenSearch Dashboards.
-Point your browser at http://192.168.6.33:5601, login with user name ```admin``` and password ```T!mberW0lf#92```.
+Point your browser at <http://192.168.6.33:5601>, login with user name ```admin``` and password ```T!mberW0lf#92```.
 Then press the hamburger menu in the top left and select Discover.
 
 ## Scenarios
@@ -138,4 +138,3 @@ In this demo these solutions were not implemented to keep the demo simple.
 ## TODO
 
 - create scenarios
-- field log has conflict in types
