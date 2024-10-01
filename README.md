@@ -1,20 +1,87 @@
 # Centralized logging with VMs demo
 
-## Fibonacci calculator
+The IT world is moving towards cloud computing, but not every company is ready, willing or able.
+However centralized logging is a powerful technique to get more value from log files and
+make finding issues much easier.
 
-<http://192.168.6.31>
+This demo shows one set of tools that can be used to accomplish centralized logging in
+VM (but also physical machines) environments:
 
-## OpenSearch API
+- [Fluent Bit](https://fluentbit.io/): used to aggregate logging and send it to a central server,
+- [OpenSearch](https://opensearch.org/): storage and indexing of log event,
+- [OpenSearch Dashboards](https://www.opensearch.org/docs/latest/dashboards/): web UI to analyze and visualize information from log events.
 
-<https://192.168.6.33:9200/>
+## Prerequisites
 
-## Kibana
+- [VirtualBox](https://www.virtualbox.org/), tested with 7.0.20
+- [Vagrant](https://www.vagrantup.com/), tested with 2.4.1
 
-<http://192.168.6.33:5601>
+## Setup
 
-Create index pattern fibonacci*
+```bash
+vagrant up
+```
 
-Refresh field list: Dashboard Management->Index patterns->select index pattern->Refresh field list
+This will create three VMs:
+
+![Overview](images/overview.png)
+
+A simple application is running as a distributed system:
+
+- an Nginx reverse proxy for the frontend,
+- a frontend application (running as a service) that serves simple HTML and forwards request to the backend that does the actual calculation,
+- an Nginx reverse proxy for the backend,
+- a backend application (also running as a service) that does the actual calculation.
+
+In total this application generates six log files. These log files are read and parsed by Fluent Bit and then sent to OpenSearch.
+OpenSearch stores and indexes each event. OpenSearch Dashboards can then be used to view and visualize the information from the logs.
+
+## Teardown
+
+```bash
+vagrant destroy -f
+```
+
+Note that this will remove all collected data. To delete the Vagrant boxes you have to use extra commands:
+
+```bash
+vagrant box list
+vagrant box remove <box name>
+```
+
+## Generating logs
+
+### Using the Fibonacci calculator
+
+Point a browser to http://192.168.6.31, fill in some number and press 'Calculate'.
+
+![Fibonacci Calculator](images/calculator.png)
+
+### Using the test script
+
+On the host, run
+
+```bash
+./test/test-setup.sh
+```
+
+This will also run some tests that check if logging is created correctly.
+
+## View logs
+
+### Using OpenSearch API
+
+```bash
+curl -k -X GET "https://192.168.6.33:9200/fibonacci-*/_search" \
+-u 'admin:T!mberW0lf#92' \
+-H "Content-Type: application/json"
+```
+
+### Using OpenSearch Dashboards
+
+You'll get a much better experience when using OpenSearch Dashboards.
+Point your browser at http://192.168.6.33:5601, login with user name ```admin``` and password ```T!mberW0lf#92```.
+Then press the hamburger menu in the top left and select Discover.
 
 ## Scenarios
 
