@@ -150,6 +150,9 @@ fn main() {
             (POST) ["/fibonacci"] => {
                 handle_fibonacci_request(request)
             },
+            (GET) ["/unused"] => {
+              Response::text("example of unused page")
+            },
             _ => Response::empty_404()  // Return 404 for any other route
         )
     });

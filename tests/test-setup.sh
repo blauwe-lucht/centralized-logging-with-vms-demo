@@ -33,10 +33,7 @@ execute_remote() {
 echo Making some calls to the frontend...
 for i in {1..10}; do
     response=$(curl -s -X POST http://$frontend_ip/fibonacci -H "Content-Type: application/json" -d '{"number": 42}')
-    if [[ $? -ne 0 ]]; then
-        echo curl failed with exit code $?
-        exit 1
-    fi
+    assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
 
     number=$(echo $response | jq '.number')
     assert "[[ $number -eq 42 ]]" "response number should be 42"
@@ -47,6 +44,9 @@ for i in {1..10}; do
     request_id=$(echo $response | jq -r '.request_id')
     assert "[[ -n $request_id ]]" "response request id should not be empty"
 done
+# Make a request of an unused page so it will be shown as infrequently used page.
+response=$(curl -s http://$frontend_ip/unused)
+assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
 
 echo Checking frontend Nginx access logs...
 execute_remote frontend $frontend_ip "grep -q '^[{]' /var/log/nginx/access.log"
