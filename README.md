@@ -22,7 +22,7 @@ VM (but also physical machines) environments:
 vagrant up
 ```
 
-This will create three VMs:
+This will take a while, so have some tea or coffee. When done, this will have created three VMs:
 
 ![Overview](images/overview.png)
 
@@ -42,11 +42,13 @@ OpenSearch stores and indexes each event. OpenSearch Dashboards can then be used
 vagrant destroy -f
 ```
 
-Note that this will remove all collected data. To delete the Vagrant boxes you have to use extra commands:
+Note that this will also remove all collected data.
+
+However it will not remove the downloaded Vagrant boxes. To delete these as well you have to use extra commands:
 
 ```bash
-vagrant box list
-vagrant box remove <box name>
+vagrant box remove generic/alma8
+vagrant box remove ubuntu/jammy64
 ```
 
 ## Generating logs
@@ -93,7 +95,7 @@ Then press the hamburger menu in the top left and select Discover.
 
 Looking at log files that includes all levels (from TRACE to CRITICAL) is a lot of work.
 Most of the time you're not interested in the lowest level of logging (until you find the proper spot to dive deeper).
-Focussing on high levels first and then dig deeper into lower levels is very easy with Kibana:
+Focussing on high levels first and then dig deeper into lower levels is very easy with OpenSearch Dashboards:
 
 - First add a filter that only shows warnings and errors
 - Find the timestamp or request ID that has an issue
@@ -112,7 +114,7 @@ Fout introduceren bij specifiek request? Bv panic bij 27372.
 
 Centralized logging is not a silver bullet, there are still some issues that make analyzing logs a challenge:
 
-- Clock skew: computer clocks of separate machines are not synchronized to within one millisecond. This means that causality is not preserved.
+- Clock skew: computer clocks of separate machines are not synchronized to within one millisecond. This means that causality is not fully preserved.
 An example: event A happens on machine A which causes event B to happen on machine B. When B's clock is ahead of A's clock, the
 log of event B may have an earlier timestamp than event A. So when looking at the combined logs it will look like event B
 occurred before event A.
@@ -127,12 +129,12 @@ In this demo these solutions were not implemented to keep the demo simple.
 
 ## Interesting stuff I had to figure out
 
-- How to use microsecond precision timestamps in OpenSearch.
+- How to use microsecond precision timestamps in OpenSearch to preserve causality within one server.
 - How to write Nginx access logs as json.
 - How to write structured logging in Rust.
 - How to let Nginx generate a request ID.
 - How to pass that request ID through the whole chain.
-- How to have Fluentbit properly parse Nginx error log.
+- How to have Fluentbit properly parse Nginx error logs.
 - How to have Fluentbit use the journal as input to read the logs of a single service.
 
 ## TODO
