@@ -33,6 +33,7 @@ execute_remote() {
 echo Making some calls to the frontend...
 for i in {1..10}; do
     response=$(curl -s -X POST http://$frontend_ip/fibonacci -H "Content-Type: application/json" -d '{"number": 42}')
+    echo $response
     assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
 
     number=$(echo $response | jq '.number')
