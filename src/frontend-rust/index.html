@@ -23,6 +23,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ number: parseInt(number) })
             });
+
+            if (!response.ok) {
+                document.getElementById("result").innerText = `Fibonacci(${number}) = error`;
+                return;
+            }
+            
             const result = await response.json();
             document.getElementById("result").innerText = `Fibonacci(${number}) = ${result.result}`;
         });
