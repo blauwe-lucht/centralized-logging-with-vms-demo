@@ -52,38 +52,6 @@ curl -s -X PUT "$opensearch_url/_index_template/fibonacci_template" \
 }'
 echo
 
-echo "Waiting for OpenSearch Dashboards to get ready..."
-max_retries=30
-retry_interval=2
-url="$osd_api/saved_objects/index-pattern/fibonacci"
-for ((i=1; i<=max_retries; i++)); do
-    set +e
-    response=$(curl -s -X GET "$url" -u "$opensearch_auth" -H 'osd-xsrf: true')
-    curl_exit=$?
-    set -e
+# Creating the index pattern still requires a manual action; I couldn't get it to work from script.
 
-    if [[ $curl_exit -eq 0 && "$response" != *"not ready yet"* ]]; then
-        echo "Got response:"
-        echo "$response"
-        break
-    fi
-
-    echo "No valid response yet (exit=$curl_exit, response=$response). Sleeping $retry_interval seconds..."
-    sleep $retry_interval
-done
-
-echo Configuring OpenSearch Dashboards...
-# Create an index pattern that we can use in the Discover page:
-curl -s -X POST "$osd_api/saved_objects/index-pattern/fibonacci" \
-    -u "$opensearch_auth" \
-    -H "Content-Type: application/json" \
-    -H "osd-xsrf: true" \
-    -d '{
-    "attributes": {
-        "title": "fibonacci*",
-        "timeFieldName": "@timestamp"
-    }
-}'
-
-echo
 echo Done!
