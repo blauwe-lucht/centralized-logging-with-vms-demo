@@ -31,20 +31,33 @@ execute_remote() {
 }
 
 echo Making some calls to the frontend...
+declare -a pids
 for i in {1..10}; do
-    response=$(curl -s -X POST http://$frontend_ip/fibonacci -H "Content-Type: application/json" -d '{"number": 42}')
-    echo $response
-    assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
+    tmpfile=$(mktemp)
 
-    number=$(echo $response | jq '.number')
-    assert "[[ $number -eq 42 ]]" "response number should be 42"
+    (
+        response=$(curl -s -X POST http://$frontend_ip/fibonacci -H "Content-Type: application/json" -d '{"number": 42}')
+        echo $response
+        assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
 
-    result=$(echo $response | jq '.result')
-    assert "[[ $result -eq 267914296 ]]" "response result should be 267914296"
+        number=$(echo $response | jq '.number')
+        assert "[[ $number -eq 42 ]]" "response number should be 42"
 
-    request_id=$(echo $response | jq -r '.request_id')
-    assert "[[ -n $request_id ]]" "response request id should not be empty"
+        result=$(echo $response | jq '.result')
+        assert "[[ $result -eq 267914296 ]]" "response result should be 267914296"
+
+        request_id=$(echo $response | jq -r '.request_id')
+        assert "[[ -n $request_id ]]" "response request id should not be empty"
+    ) &
+
+    pids+=($!)
 done
+
+# Wait for all background tasks to finish
+for pid in "${pids[@]}"; do
+    wait "$pid"
+done
+
 # Make a request of an unused page so it will be shown as infrequently used page.
 response=$(curl -s http://$frontend_ip/unused)
 assert "[[ $? -eq 0 ]]" "curl failed with exit code $?"
