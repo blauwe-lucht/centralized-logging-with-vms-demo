@@ -89,7 +89,18 @@ Then press the hamburger menu in the top left and select Discover.
 
 ### Following a request over multiple logs using request ID
 
-### Saving searches (why? what's the use case?)
+### Saving searches
+
+- starting with errors
+- starting with only high level logging (INFO)
+- removing unwanted logging (third party libraries)
+- only from specific components (backend service)
+
+### Using DQL to create OR filters
+
+```dql
+level:ERROR or level:CRITICAL or status:500
+```
 
 ### Filtering logs by level
 
