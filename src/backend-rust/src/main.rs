@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::io::Read;
-use tracing::{info, debug, warn, Level};
+use std::{io::Read, thread::sleep, time};
+use tracing::{info, debug, warn, error, Level};
 use tracing_subscriber::EnvFilter;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use rouille::{router, Request, Response};
@@ -15,16 +15,27 @@ struct FibonacciRequest {
 #[derive(Debug, Serialize)]
 struct FibonacciResponse {
     number: i32,
-    result: i64,
+    result: u64,
     request_id: String,
 }
 
-// Function to calculate the Fibonacci number
-fn calculate_fibonacci(n: i32) -> i64 {
+fn calculate_fibonacci(request_id: &String, n: i32) -> u64 {
+    let function = "calculate_fibonacci";
+
     match n {
+        n if n < 0 => {
+            error!(function, request_id, number = n, "Negative number");
+            panic!("Negative Fibonacci index: {}", n)
+        },
         0 => 0,
         1 => 1,
         _ => {
+            // Introduce a sleep so we are able to extend the duration of calls by using higher numbers.
+            // This will make for more interesting logging/graphs.
+            // Factor 20 is used to introduce a +- 2 second delay with n that generates the largest
+            // Fibonacci number that fits in a u64 (93).
+            sleep(time::Duration::from_millis((n * 20) as u64));
+
             let mut a = 0;
             let mut b = 1;
             for _ in 2..=n {
@@ -34,6 +45,7 @@ fn calculate_fibonacci(n: i32) -> i64 {
             }
             b
         }
+        // Note that n > 93 will lead to an overflow.
     }
 }
 
@@ -67,7 +79,7 @@ fn handle_fibonacci_request(request: &Request) -> Response {
 
     debug!(function, request_id, number = fib_request.number, "Calculating Fibonacci");
 
-    let result = calculate_fibonacci(fib_request.number);
+    let result = calculate_fibonacci(&request_id, fib_request.number);
     let fib_response = FibonacciResponse {
         number: fib_request.number,
         result,
@@ -120,6 +132,10 @@ fn main(){
         .with_line_number(true)
         .init();
 
+    std::panic::set_hook(Box::new(|info| {
+        error!("Panic occurred: {}", info);
+    }));
+    
     info!("Fibonacci Backend started");
 
     rouille::start_server("127.0.0.1:5000", move |request| {

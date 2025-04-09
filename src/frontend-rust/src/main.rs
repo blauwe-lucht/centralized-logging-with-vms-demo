@@ -17,7 +17,7 @@ struct FibonacciRequest {
 #[derive(Debug, Serialize, Deserialize)]
 struct FibonacciResponse {
     number: i32,
-    result: i64,
+    result: u64,
     request_id: String,
 }
 
