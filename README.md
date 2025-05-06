@@ -151,3 +151,4 @@ In this demo these solutions were not implemented to keep the demo simple.
 ## TODO
 
 - create scenarios
+- add target/source/component field for each component so it's possible to filter for example on only frontend-nginx-access lines
