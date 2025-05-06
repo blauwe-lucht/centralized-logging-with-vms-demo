@@ -5,7 +5,7 @@
 
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:2.17.0
+    image: opensearchproject/opensearch:2.19.0
     container_name: opensearch-node1
     restart: unless-stopped
     environment:
@@ -24,7 +24,7 @@ services:
         soft: 65536 # Maximum number of open files for the opensearch user - set to at least 65536
         hard: 65536
     volumes:
-      - opensearch-data1:/usr/share/opensearch/data # Creates volume called opensearch-data1 and mounts it to the container
+      - opensearch-data1:/usr/share/opensearch/data1 # Creates volume called opensearch-data1 and mounts it to the container
     ports:
       - 9200:9200 # REST API
       - 9600:9600 # Performance Analyzer
@@ -39,7 +39,7 @@ services:
 
   opensearch-node2:
     # This should be the same image used for opensearch-node1 to avoid issues
-    image: opensearchproject/opensearch:2.17.0
+    image: opensearchproject/opensearch:2.19.0
     container_name: opensearch-node2
     restart: unless-stopped
     environment:
@@ -58,7 +58,7 @@ services:
         soft: 65536
         hard: 65536
     volumes:
-      - opensearch-data2:/usr/share/opensearch/data
+      - opensearch-data2:/usr/share/opensearch/data2
     # Don't add any ports, from the outside it's fine that we can only talk with node1.
     networks:
       - logging-net
@@ -71,7 +71,7 @@ services:
 
   opensearch-dashboards:
     # Make sure the version of opensearch-dashboards matches the version of opensearch installed on other nodes
-    image: opensearchproject/opensearch-dashboards:2.17.0
+    image: opensearchproject/opensearch-dashboards:2.19.0
     container_name: opensearch-dashboards
     restart: unless-stopped
     ports:
