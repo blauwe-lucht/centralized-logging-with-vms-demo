@@ -83,43 +83,92 @@ curl -k -X GET "https://192.168.6.33:9200/fibonacci-*/_search" \
 
 You'll get a much better experience when using OpenSearch Dashboards.
 Point your browser at <http://192.168.6.33:5601>, login with user name ```admin``` and password ```T!mberW0lf#92```.
+Click through the welcome screens.
 Then press the hamburger menu in the top left and select Discover.
+You need to create an index pattern manually (I couldn't get it to work automatically). Use Index Pattern Name 'fibonacci-*',
+so all fibonacci log indices will be included. Select '@timestamp' as the time field.
+Create the index pattern and return to the Discover screen.
 
 ## Scenarios
 
+### Viewing log files the old way
+
+- select specific component to view by entering '_index: fibonacci-backend-application*' in the search
+- expand top document
+- select which fields to see, for example level, message
+- when needed, reverse the sort order on timestamp
+- save search (top right)
+
 ### Following a request over multiple logs using request ID
 
-### Saving searches
+- filter on error: add filter 'level is ERROR'
+- expand document, select 'View surrounding documents'
+- find related document with request ID
+- change filter to 'request_id is \<request ID\>'
+- filter out unwanted logging, like third party libraries
 
-- starting with errors
-- starting with only high level logging (INFO)
-- removing unwanted logging (third party libraries)
-- only from specific components (backend service)
+### Seeing errors appear live
 
-### Using DQL to create OR filters
+- select ERROR logging or failed HTTP request by entering 'level:ERROR OR status:500' in the search
+- set refresh to one second
+- fill in 100 in the Fibonacci calculator and see the error appear within a couple of seconds
+- save search to 'errors'
 
-```dql
-level:ERROR or level:CRITICAL or status:500
-```
+### See only HTTP requests
 
-### Filtering logs by level
+- find a document of an Nginx index
+- expand the document
+- left of the 'request_time' field click on 'Filter for field present'.
+- save search
 
-Looking at log files that includes all levels (from TRACE to CRITICAL) is a lot of work.
-Most of the time you're not interested in the lowest level of logging (until you find the proper spot to dive deeper).
-Focussing on high levels first and then dig deeper into lower levels is very easy with OpenSearch Dashboards:
+### See long HTTP requests
 
-- First add a filter that only shows warnings and errors
-- Find the timestamp or request ID that has an issue
-- Filter on that timestamp/request ID and open the filter so it shows lower level log events
+- as previous section
+- add search 'request_time>1'
+- save search to 'long-http-requests' (don't forget to select 'Save as new search')
 
-TODO: hoe gaat ik dit proces laten zien in deze demo?
-Fout introduceren bij specifiek request? Bv panic bij 27372.
+### Create visualizations from saved searches
+
+In the left top hamburger menu, select Visualize.
+
+#### Number of errors per minute for the past day
+
+- New Visualization
+- select vertical bar
+- select saved search 'errors'
+- select Buckets, X-axis, Date Histogram, set minimum interval to one minute
+- in the top right, change the range to 'Last 24 hours'
+- save the visualization as 'error-count-per-time'
+
+#### Number of long HTTP requests per minute for the past day
+
+- New Visualization
+- select vertical bar
+- select saved search 'long-http-requests'
+- select Buckets, X-axis, Date Histogram, set minimum interval to one minute
+- in the top right, change the range to 'Last 24 hours'
+- save the visualization as 'long-http-requests-per-time'
+
+#### Show top 10 of longests HTTP requests
+
+- New Visualization
+- select 'Data table'
+- select saved search 'long-http-requests'
+- change metric from Count to Max, select field 'request_time'
+- add a bucket, select 'split rows', set aggregation to 'Terms', use field 'request_time', set size to 10
+- add a bucket, select 'split rows', set aggregation to 'Terms', use field 'path.keyword', set size to 10
+- press Update
+- save the Visualization as 'longest-http-requests'
 
 ### Creating dashboard from saved search
 
+- In the top left hamburger menu chose Dashboards. Click 'create new'.
+- Add panels from the saved searches.
+- Save the dashboard.
+
 ### Creating alert on number of errors
 
-### Creating alert on application services not started
+TODO
 
 ## Issues
 
