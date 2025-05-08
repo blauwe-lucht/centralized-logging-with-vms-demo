@@ -199,5 +199,10 @@ In this demo these solutions were not implemented to keep the demo simple.
 
 ## TODO
 
-- create scenarios
 - add target/source/component field for each component so it's possible to filter for example on only frontend-nginx-access lines
+- sync clocks with PTP to microseconds to improve order of log lines between different servers
+- find out why sometimes visualizations and dashboards disappear
+- get meaningful logging from services
+- find out if Nginx is somehow able to log microseconds
+- add alerting scenario
+- add more interesting visualizations and dashboards
